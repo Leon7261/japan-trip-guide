@@ -345,6 +345,57 @@
       .planbox, .plan-panel, .pp-route, .pp-flow { page-break-inside: avoid; break-inside: avoid; }
     }
   </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+  /* ===== 每日融合模块：时间轴 × 路线 × 内嵌真实地图 ===== */
+  .fuse-wrap{ background:#fff; border:1px solid var(--rule); border-radius:16px; overflow:hidden;
+    box-shadow:0 6px 24px rgba(80,60,40,.07); margin:1.1rem 0 1.4rem; }
+  .fuse-body{ display:grid; grid-template-columns:1fr 1fr; }
+  @media(max-width:900px){ .fuse-body{ grid-template-columns:1fr; } }
+  .fuse-wrap .flow-col{ padding:1.1rem 1.25rem; border-right:1px solid var(--rule); }
+  @media(max-width:900px){ .fuse-wrap .flow-col{ border-right:none; border-top:1px solid var(--rule); order:2; } }
+  .fuse-wrap .col-cap{ font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:.9rem; }
+  .fuse-wrap .steps{ list-style:none; position:relative; margin:0; padding:0; }
+  .fuse-wrap .steps::before{ content:''; position:absolute; left:15px; top:8px; bottom:26px; width:2px; background:var(--rule); }
+  .fuse-wrap .step{ position:relative; padding:0 0 1.05rem 44px; cursor:pointer; }
+  .fuse-wrap .step:last-child{ padding-bottom:.2rem; }
+  .fuse-wrap .step .sbadge{ position:absolute; left:2px; top:1px; width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:.82rem; border:2px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.22); z-index:1; transition:transform .15s,background .15s; }
+  .fuse-wrap .step .sbadge.hub{ background:var(--accent2); }
+  .fuse-wrap .step .sbadge.ykt{ background:#2b2b2b; color:#ffd54a; border-color:#ffd54a; }
+  .fuse-wrap .step .stime{ font-family:var(--font-mono); font-size:.78rem; color:var(--accent); font-weight:700; }
+  .fuse-wrap .step .sname{ font-family:var(--font-head); font-size:1.02rem; font-weight:700; margin:.05rem 0 .15rem; }
+  .fuse-wrap .step .sdesc{ font-size:.85rem; color:#4a4238; }
+  .fuse-wrap .step .sleg{ display:inline-flex; align-items:center; gap:.35rem; margin-top:.4rem; font-size:.76rem; color:var(--accent2);
+    background:var(--bg2); border:1px solid var(--rule); border-radius:16px; padding:.16rem .6rem; }
+  .fuse-wrap .step.active .sbadge{ transform:scale(1.18); box-shadow:0 0 0 4px rgba(178,58,46,.18); }
+  .fuse-wrap .step.active .sname{ color:var(--accent); }
+  .fuse-wrap .step:hover .sname{ color:var(--accent); }
+
+  .fuse-wrap .map-col2{ position:relative; }
+  @media(max-width:900px){ .fuse-wrap .map-col2{ order:1; } }
+  .fuse-wrap .map-inner{ position:sticky; top:0; }
+  .fuse-wrap .fmap{ width:100%; height:520px; background:#e8e2d5; z-index:1; }
+  @media(max-width:900px){ .fuse-wrap .fmap{ height:360px; } }
+  .fuse-wrap .map-bar{ position:absolute; z-index:600; top:10px; left:10px; right:10px; display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; pointer-events:none; }
+  .fuse-wrap .fbm-btn{ pointer-events:auto; font-family:var(--font); font-size:.74rem; padding:.24rem .6rem; border-radius:16px; border:1px solid var(--rule); background:rgba(255,255,255,.92); color:var(--ink); cursor:pointer; }
+  .fuse-wrap .fbm-btn.active{ background:var(--accent2); color:#fff; border-color:var(--accent2); }
+  .fuse-wrap .map-hint{ pointer-events:none; margin-left:auto; font-size:.7rem; color:#fff; background:rgba(42,37,33,.6); padding:.22rem .55rem; border-radius:14px; }
+  .fuse-wrap .num-badge{ background:var(--accent); color:#fff; border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.8rem; font-weight:700; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .fuse-wrap .num-badge.hub{ background:var(--accent2); }
+  .fuse-wrap .ykt-badge{ background:#2b2b2b; color:#ffd54a; border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:1rem; border:2px solid #ffd54a; box-shadow:0 1px 5px rgba(0,0,0,.4); }
+  .leaflet-popup-content b{ font-family:var(--font-head); }
+  .leaflet-popup-content .pl{ display:block; color:var(--accent2); font-size:.78rem; margin-top:.2rem; }
+  .fuse-wrap .applinks{ margin-top:.5rem; padding-top:.45rem; border-top:1px dashed var(--rule); display:flex; flex-wrap:wrap; gap:.35rem; }
+  .fuse-wrap .applinks .al-t, .leaflet-popup-content .al-t{ flex-basis:100%; font-size:.7rem; color:var(--muted); margin-bottom:.1rem; }
+  .leaflet-popup-content .applinks{ margin-top:.55rem; padding-top:.5rem; border-top:1px dashed var(--rule); display:flex; flex-wrap:wrap; gap:.35rem; }
+  .leaflet-popup-content .applinks a{ font-size:.74rem; text-decoration:none; padding:.2rem .5rem; border-radius:6px; border:1px solid var(--rule); color:var(--ink); background:var(--bg2); white-space:nowrap; }
+  .fuse-foot{ padding:.7rem 1.3rem; font-size:.82rem; color:var(--muted); border-top:1px solid var(--rule); background:var(--bg2); }
+  .fuse-foot b{ color:var(--accent); }
+  @media print{ .fuse-wrap .map-col2{ display:none; } .fuse-wrap .flow-col{ border-right:none; } }
+  </style>
 </head>
 <body>
   <article class="page">
@@ -370,7 +421,7 @@
         <span class="mc-btn"><span class="em">🧭</span> 立即打开</span>
       </a>
 
-      <p class="lead">已按你最新调整重排：<mark class="key">Day2 去镰仓、Day3 以新宿购物为主玩一天后当晚移动大阪、Day4 大阪玩一整天当晚再去京都</mark>。硬约束不变：10/1 下午 5 点落地羽田当晚登涩谷天空、10/7 晚 7 点羽田起飞。东京段住在你自己的<mark class="key">弥生町住处（中野区弥生町一丁目 · 邮编 164-0013）2 晚</mark>，之后大阪 1 晚 + 京都 3 晚。<strong>同行第 3 位朋友住浅草附近，行李寄存在你们弥生町住处，3 号回来取</strong>。</p>
+      <p class="lead">行程主线：<mark class="key">Day2 去镰仓、Day3 以新宿购物为主玩一天后当晚移动大阪、Day4 大阪玩一整天当晚再去京都</mark>。硬约束：10/1 下午 5 点落地羽田当晚登涩谷天空、10/7 晚 7 点羽田起飞。东京段住在你自己的<mark class="key">弥生町住处（中野区弥生町一丁目 · 邮编 164-0013）2 晚</mark>，之后大阪 1 晚 + 京都 3 晚。<strong>同行第 3 位朋友住浅草附近，行李寄存在你们弥生町住处，3 号回来取</strong>。</p>
 
       <div class="facts">
         <div class="fact"><div class="n">7天</div><div class="l">10/1 周三 – 10/7 周二</div></div>
@@ -379,18 +430,9 @@
         <div class="fact"><div class="n">京都3晚</div><div class="l">四条里士满 · 10/4–10/6</div></div>
       </div>
 
-      <div class="note warn">
-        <span class="h">本次改动的核心影响：大阪多了「一整天」</span>
-        由原来只过一夜改为 <strong>10/4 一整天都玩大阪</strong>（大阪城、环球影城、道顿堀、黑门市场等都玩得开），当晚再坐车去京都。因此建议：<mark class="key">3 号出发前，先去住处附近最近的黑猫宅急便营业所（渋谷本町2丁目中心，步行约 13 分）把大件行李直寄京都酒店</mark>，大阪这一天彻底轻装暴走，晚上带小包去京都即可。详见 Day3 与 Day4。
-      </div>
-
       <div class="note">
         <span class="h">关于「天际电梯」</span>
-        指东京地标观景塔。你们已选<strong>涩谷天空（Shibuya Sky）</strong>——顶层 229m 露天观景台，俯瞰涩谷十字路口的都市夜景，是拍大片的首选；<strong>从弥生町住处乘丸之内线到新宿换 JR 山手线到涩谷，约 25 分钟、站台直连观景台</strong>，<strong>务必提前网上分时段预约</strong>。若当晚航班延误、时间紧张，也可临时改新宿附近的东京都厅展望室（免费）等。见 Day1。
-      </div>
-      <div class="note">
-        <span class="h">🗺️ 每日线路图（新增）</span>
-        每天都新增了一张<strong>「步行 + 公共交通」线路图</strong>：<mark class="key">红=进出港/地标，蓝=枢纽/车站</mark>；连接段上标注了<strong>交通方式</strong>（🚶步行 / 🚈电车地铁 / 🚄新干线 / 🚌巴士 / 🚃江之电）、<strong>具体线路名与耗时</strong>。虚线为步行、实线为公共交通，一眼看清每段怎么走。想要<strong>真实地图导航版</strong>（可缩放拖动、真实经纬度打点连线）请打开 👉 <a href="./route-map.html"><strong>交互式导航线路图</strong></a>。
+        即你们已选的<strong>涩谷天空（Shibuya Sky）</strong>——229m 露天观景台，务必提前网上分时段预约；详见 Day1。
       </div>
     </section>
     <nav class="toc">
@@ -431,14 +473,9 @@ flowchart LR
         <figcaption>图 1：7 日整体动线与住宿分段（红=进出港，蓝=关西住宿点）</figcaption>
       </figure>
 
-      <div class="note">
-        <span class="h">行李策略（最省力）</span>
-        <strong>3 号出发前</strong>，先去住处附近最近的<strong>黑猫宅急便营业所（渋谷本町2丁目中心，步行约 13 分 / 0.9km）</strong>用<strong>宅急便（Yamato 黑猫）</strong>把大箱子寄到<strong>京都酒店</strong>（一般次日达，4 号傍晚前送到，正好衔接）。当天只背一个装 1–2 套换洗的小包去大阪过夜，4 号轻装到京都，箱子已在前台等你。这样东京玩一天、夜移大阪都不受行李拖累。
-      </div>
-
       <div class="note warn">
         <span class="h">🧳 第 3 位朋友的行李（住浅草 · 不寄件）</span>
-        住浅草附近的朋友<strong>不想寄行李</strong>，所以他的行李<strong>提前寄存在你们弥生町住处</strong>（建议 1 号或 2 号顺路送到），<mark class="key">3 号当天他需要到弥生町住处取回行李再一起赶车</mark>。中野区经丸之内线/JR 到新宿只要几分钟，<strong>去羽田、去新大阪的新干线（品川/东京站）都很方便</strong>，且 Day3 全天以新宿购物为主、傍晚回住处取行李后从东京站赶末班车，动线顺。两点提醒：① 因为是自住处，代收/寄存朋友行李没有酒店那种限制，但记得留好门禁/钥匙的取物安排；② 3 号行程收尾时把「回弥生町取行李」算进时间，别卡末班车。
+        朋友不想寄行李，<mark class="key">提前把行李寄存在你们弥生町住处（1 号或 2 号顺路送到），3 号当天回住处取回再一起赶车</mark>。自住处代收无酒店限制，但记得留好门禁/钥匙的取物安排，并把「回弥生町取行李」算进 3 号收尾时间，别卡末班车。
       </div>
 
       <div class="lugcard">
@@ -479,28 +516,25 @@ flowchart LR
       </div>
       <p class="day-note">硬约束：下午 5 点才落地羽田。今晚以「先回弥生町住处放行李 + 一个夜景地标 + 吃顿好的」为目标，不安排白天景点。已选的涩谷天空从住处经丸之内线到新宿换 JR 山手线约 25 分，看完夜景回住处也顺。</p>
 
-      <ul class="tl">
-        <li><span class="t">17:00</span><span class="a">羽田机场 (HND) 落地</span><div class="desc">入境+取行李通常 45–70 分钟，实际出关约 17:45–18:15。</div></li>
-        <li><span class="t">18:15</span><span class="a">羽田 → 弥生町住处</span><div class="desc">乘京急线到品川转 JR 到新宿、再换丸之内线到弥生町（中野坂上/新中野一带），约 55 分钟。先回住处放行李，轻装出门。</div></li>
-        <li><span class="t">19:15</span><span class="a">弥生町 → 涩谷（看夜景）</span><div class="desc">丸之内线到新宿换 JR 山手线到涩谷，约 25 分；先在涩谷站周边或 SCRAMBLE SQUARE 楼内简单吃点。</div></li>
-        <li><span class="t">20:30</span><span class="a">登「涩谷天空」看夜景</span><div class="desc">Shibuya Sky 露天观景台，俯瞰涩谷十字路口夜景（见下方方案，需预约时段票）。</div></li>
-        <li><span class="t">22:00</span><span class="a">返回弥生町住处休息</span><div class="desc">涩谷→新宿 JR 山手线，再换丸之内线回弥生町；调整时差，为明天满负荷做准备。</div></li>
-      </ul>
-
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day1 线路图 · <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node end">✈️ 羽田机场</div>
-          <div class="rm-leg transit"><span class="mode">🚈 电车</span><span class="arrow"></span><span class="line">京急→品川转JR→丸之内线<br>约55分</span></div>
-          <div class="rm-node hub">🏠 弥生町住处</div>
-          <div class="rm-leg transit"><span class="mode">🚈 丸之内线+JR山手线</span><span class="arrow"></span><span class="line">弥生町→(新宿换乘)→涩谷<br>约25分</span></div>
-          <div class="rm-node">🍽️ 涩谷晚餐</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">涩谷站直连<br>约5分</span></div>
-          <div class="rm-node end">🌃 涩谷天空</div>
+      <div class="fuse-wrap" data-fuse="1">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通</span></span><span>红=进出港/地标 · 蓝=住宿枢纽</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day1 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day1.png" alt="Day1 真实地图线路：羽田→弥生町住处→涩谷天空"></div>
-        <a class="day-map-btn" href="./route-map.html?day=1" target="_blank" rel="noopener">🧭 在交互地图打开 Day1（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <h3>今晚夜景 · 点方案切换路线与信息</h3>
@@ -519,47 +553,30 @@ flowchart LR
 
       <div class="day-img"><img src="assets/kamakura.jpg" alt="镰仓大佛与江之电"></div>
 
-      <ul class="tl">
-        <li><span class="t">08:00</span><span class="a">弥生町 → 镰仓</span><div class="desc">从住处经丸之内线到新宿，换 <strong>JR 湘南新宿线（直通逗子/大船）→ 横须贺线</strong>，多为直达或大船 1 次换乘，含换乘全程约 1 小时10分。</div></li>
-        <li><span class="t">09:15</span><span class="a">鹤冈八幡宫</span><div class="desc">镰仓象征、镰仓幕府信仰中心，出站沿小町通逛过去。<sup><a href="#cite-3">[3]</a></sup></div></li>
-        <li><span class="t">11:00</span><span class="a">江之电 → 长谷</span><div class="desc">乘复古「江之电」，沿湘南海岸线行驶，像动画里的海边电车。<sup><a href="#cite-4">[4]</a></sup></div></li>
-        <li><span class="t">11:30</span><span class="a">高德院 镰仓大佛</span><div class="desc">出长谷站约 500m，13.35m 青铜阿弥陀佛坐像，可入内参观。<sup><a href="#cite-5">[5]</a></sup></div></li>
-        <li><span class="t">13:00</span><span class="a">长谷寺 + 午餐</span><div class="desc">观音+海景庭园；周边吃海鲜丼、镰仓可乐饼。</div></li>
-        <li><span class="t">14:30</span><span class="a">镰仓高校前 / 江之岛</span><div class="desc">《灌篮高手》道口打卡；镰仓多留一会，慢逛海岸线、江之岛看落日，把镰仓玩透。</div></li>
-        <li><span class="t">19:45</span><span class="a">镰仓 → 东京站</span><div class="desc">乘 <strong>JR 横须贺线</strong>从镰仓直达东京站，约 1 小时。横须贺线本就经东京站，返程顺路，不绕远。</div></li>
-        <li><span class="t">21:00</span><span class="a">东京塔外景拍照打卡（不登塔）</span><div class="desc">东京站换乘约 15 分（地铁三田线到御成门/大门，或大江户线赤羽桥）。<strong>不登塔</strong>，直接去塔下经典机位拍夜景：<mark class="key">芝公园 4 号地</mark>（正面无遮挡草坪视角，最出片）、<mark class="key">增上寺</mark>（古寺山门 + 红塔）、<mark class="key">赤羽桥路口</mark>（出站即拍拔地而起的气势）。东京塔灯光通常亮至 24:00，9 点后人也少，拍照从容。<sup><a href="#cite-12">[12]</a></sup></div></li>
-        <li><span class="t">22:00</span><span class="a">东京塔 → 返回弥生町</span><div class="desc">乘地铁/JR 约 35 分回弥生町（经新宿换丸之内线），路上或回住处后简单吃个宵夜。</div></li>
-      </ul>
-
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day2 线路图（路线A经典顺时针）· <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">🏠 弥生町</div>
-          <div class="rm-leg transit"><span class="mode">🚈 电车</span><span class="arrow"></span><span class="line">弥生町→新宿→JR湘南新宿线→横须贺线<br>约1小时10分</span></div>
-          <div class="rm-node">⛩️ 镰仓站</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">小町通<br>约10分</span></div>
-          <div class="rm-node">鹤冈八幡宫</div>
-          <div class="rm-leg transit"><span class="mode">🚃 江之电</span><span class="arrow"></span><span class="line">镰仓→长谷<br>约5分</span></div>
-          <div class="rm-node">长谷站</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">约7分</span></div>
-          <div class="rm-node">🗿 镰仓大佛/长谷寺</div>
-          <div class="rm-leg transit"><span class="mode">🚃 江之电</span><span class="arrow"></span><span class="line">→镰仓高校前<br>约8分</span></div>
-          <div class="rm-node">🏫 高校前海岸</div>
-          <div class="rm-leg transit"><span class="mode">🚈 JR横须贺线</span><span class="arrow"></span><span class="line">镰仓→东京站<br>约1小时</span></div>
-          <div class="rm-node">🚄 东京站</div>
-          <div class="rm-leg transit"><span class="mode">🚈 地铁</span><span class="arrow"></span><span class="line">东京站→御成门/赤羽桥<br>约15分</span></div>
-          <div class="rm-node end">🗼 东京塔外景拍照</div>
-          <div class="rm-leg transit"><span class="mode">🚈 地铁/JR</span><span class="arrow"></span><span class="line">东京塔→(新宿换乘)→弥生町<br>约35分</span></div>
-          <div class="rm-node hub">🏠 弥生町</div>
+      <div class="fuse-wrap" data-fuse="2">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通(含江之电)</span></span><span>建议购「江之电一日券」</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day2 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day2.png" alt="Day2 真实地图线路：新宿→镰仓→江之电海岸线"></div>
-        <a class="day-map-btn" href="./route-map.html?day=2" target="_blank" rel="noopener">🧭 在交互地图打开 Day2（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <h3>镰仓玩法 · 点方案切换路线与信息</h3>
       <div class="planbox" data-day="2"></div>
-      <div class="note"><span class="h">交通票建议</span>到镰仓后可买「江之电一日券」无限次乘坐，沿线上下车最划算。<mark class="key">镰仓多玩到近 20:00，返程走 JR 横须贺线直接到东京站，顺路去东京塔拍夜景（不登塔）</mark>——推荐芝公园 4 号地、增上寺、赤羽桥路口三个免费机位，约 21:00 到、人少好拍；东京塔灯光一般亮到 24:00，从容不赶。拍完约 35 分回弥生町。当晚回住处，别忘 3 号出发前把大件行李寄京都。</div>
+      <div class="note"><span class="h">交通票建议</span>到镰仓后买「江之电一日券」无限次乘坐、沿线上下车最划算。<mark class="key">镰仓玩到近 20:00，返程走 JR 横须贺线直达东京站顺路去东京塔拍夜景（不登塔）</mark>——推荐芝公园 4 号地、增上寺、赤羽桥路口三个免费机位。当晚回住处，别忘 3 号出发前把大件行李寄京都。</div>
     </section>
 
     <!-- ===================== DAY 3 ===================== -->
@@ -569,56 +586,35 @@ flowchart LR
         <span class="dttl">新宿购物一天 · 夜移大阪</span>
         <span class="dtag">10/3 周五 · 整天+移动</span>
       </div>
-      <p class="day-note">今天<mark class="key">离开弥生町住处</mark>，<mark class="key">以新宿购物为主</mark>、顺带玩新宿周边景点，<mark class="key">坐当日末班新干线去大阪过夜</mark>。<mark class="key">出发前先去住处附近最近的黑猫营业所（渋谷本町2丁目中心·步行约13分）把大件行李用宅急便寄京都酒店</mark>，只带小包全天轻装。<strong>住浅草的朋友寄存在你们弥生町住处的行李，今晚回住处时一起取</strong>，随后从弥生町经新宿乘 JR 中央线快速约 14 分到东京站赶末班车（品川站上车亦可）。</p>
+      <p class="day-note">今天<mark class="key">离开弥生町、以新宿购物为主</mark>，顺带玩新宿周边景点，<mark class="key">坐当日末班新干线去大阪过夜</mark>。出发前先去住处最近的黑猫营业所把大件行李寄京都酒店，全天轻装。<strong>住浅草朋友寄存在住处的行李，今晚回来一起取</strong>，随后从弥生町经新宿乘 JR 中央线快速约 14 分到东京站赶车（品川站上车亦可）。</p>
 
       <div class="day-img"><img src="assets/hero_tokyo.jpg" alt="东京新宿夜景"></div>
 
-      <ul class="tl">
-        <li><span class="t">08:30</span><span class="a">弥生町出发 · 寄大件行李</span><div class="desc">先到住处附近最近的黑猫营业所（渋谷本町2丁目中心，步行约13分）办宅急便寄大箱到京都酒店（次日达）；小包随身。<strong>朋友寄存在住处的行李</strong>白天留着，傍晚回来一起取。</div></li>
-        <li><span class="t">09:30</span><span class="a">新宿御苑 · 晨游</span><div class="desc">新宿站旁的大型庭园，日/英/法式庭园并存，早上人少空气好，散步 1 小时再开逛。</div></li>
-        <li><span class="t">11:00</span><span class="a">东京都厅展望室（免费）</span><div class="desc">202m 高空免费展望，俯瞰新宿高楼群，晴天可望富士山；就在新宿西口。</div></li>
-        <li><span class="t">12:00</span><span class="a">午餐 + 新宿购物（主场）</span><div class="desc">新宿是东京最强购物区之一：伊势丹/小田急/京王百货、LUMINE、纽约客广场、Bic Camera/友都八喜电器、唐吉诃德、GU/UNIQLO 旗舰。药妆、电器、服饰、手办一站买齐。</div></li>
-        <li><span class="t">16:00</span><span class="a">歌舞伎町 / 哥斯拉头 / 东宝大楼</span><div class="desc">逛累了到歌舞伎町一带打卡，新宿黄金街、哥斯拉头像楼，顺便囤手信。</div></li>
-        <li><span class="t">18:30</span><span class="a">晚餐（新宿）</span><div class="desc">思出横丁烧鸟、风林会馆一带餐厅或百货美食层，从容吃顿正餐。</div></li>
-        <li><span class="t">19:45</span><span class="a">返回弥生町住处 · 取行李</span><div class="desc"><mark class="key">回弥生町住处取回全部寄存行李（含住浅草朋友的）</mark>，三人会合、清点后一起出发赶车。这步别省，务必算进时间。</div></li>
-        <li><span class="t">20:50</span><span class="a">弥生町 → 东京站</span><div class="desc">经新宿换 JR 中央线快速到东京约 14 分；提前到站买好驿便当带上车当宵夜，预留富余别卡点。</div></li>
-        <li><span class="t">21:24</span><span class="a">乘当日<strong>末班 のぞみ293号</strong> 去大阪</span><div class="desc">最后一班直达新大阪的 Nozomi（车次 <strong>のぞみ293号</strong>）<strong>东京站 21:24 发</strong>（品川 21:31，途经名古屋 22:58、京都 23:32），车上吃便当。已按 JR 官方时刻核实，出行前再以官方 App 复核当日班次。<sup><a href="#cite-6">[6]</a></sup></div></li>
-        <li><span class="t">23:45</span><span class="a">抵新大阪 → 卢菲尔蒙特利酒店</span><div class="desc">新大阪站转 JR/地铁 1 站到梅田(大阪站)，酒店紧邻 JR 大阪站与阪急/阪神大阪梅田站，约 00:10 前入住休息。</div></li>
-        <li><span class="t">次日</span><span class="a">直接休息</span><div class="desc">到得晚，不再安排夜宵，养足精神——明天整天畅玩大阪。</div></li>
-      </ul>
-
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day3 线路图（新宿购物为主）· <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">🏠 弥生町住处</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">→最近黑猫营业所<br>约13分·0.9km</span></div>
-          <div class="rm-node">📦 宅急便(寄大件)</div>
-          <div class="rm-leg transit"><span class="mode">🚈 丸之内线</span><span class="arrow"></span><span class="line">→新宿御苑<br>约15分</span></div>
-          <div class="rm-node">🌳 新宿御苑</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">→西口<br>约15分</span></div>
-          <div class="rm-node">🏙️ 都厅展望室</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">新宿商圈<br>约10分</span></div>
-          <div class="rm-node">🛍️ 新宿购物(伊势丹/百货/电器)</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">→歌舞伎町<br>约8分</span></div>
-          <div class="rm-node">🦖 歌舞伎町</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行/丸之内线</span><span class="arrow"></span><span class="line">回弥生町取行李<br>约20分</span></div>
-          <div class="rm-node hub">🏠 弥生町住处(取行李)</div>
-          <div class="rm-leg transit"><span class="mode">🚈 经新宿·JR中央线快速</span><span class="arrow"></span><span class="line">弥生町→东京<br>约25分</span></div>
-          <div class="rm-node hub">🚄 东京站</div>
-          <div class="rm-leg transit"><span class="mode">🚄 末班のぞみ293</span><span class="arrow"></span><span class="line">21:24发→新大阪<br>约2h21m·23:45到</span></div>
-          <div class="rm-node">新大阪</div>
-          <div class="rm-leg transit"><span class="mode">🚈 JR/地铁</span><span class="arrow"></span><span class="line">→梅田(大阪站)<br>约5分</span></div>
-          <div class="rm-node end">🏨 卢菲尔蒙特利(梅田)</div>
+      <div class="fuse-wrap" data-fuse="3">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通</span></span><span>大件已宅急便寄京都·全天轻装</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day3 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day3.png" alt="Day3 真实地图线路：新宿御苑→都厅→新宿购物→歌舞伎町→东京站→新干线→梅田"></div>
-        <a class="day-map-btn" href="./route-map.html?day=3" target="_blank" rel="noopener">🧭 在交互地图打开 Day3（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <h3>新宿购物 + 周边 · 点方案切换路线与信息（傍晚取行李后赶车）</h3>
       <div class="planbox" data-day="3"></div>
 
-      <div class="note warn"><span class="h">赶车提醒</span>你选择<strong>坐当日末班新干线</strong>去大阪，好处是新宿购物能一直逛到晚上、时间宽裕。<mark class="key">东京→新大阪的末班直达 Nozomi 为「のぞみ293号」，东京站 21:24 发车、23:45 到新大阪</mark>（品川站 21:31 发；已按 JR 官方时刻核实，务必<strong>提前订好指定席</strong>，并以官方 App 当日实际时刻为准）。新宿到东京站坐 JR 中央线快速约 14 分（从弥生町经新宿约 25 分），请把<strong>回弥生町住处取行李</strong>与到站安检的富余算进去，别卡最后一分钟。</div>
+      <div class="note warn"><span class="h">赶车提醒</span>坐当日末班新干线去大阪，新宿购物能逛到晚上。<mark class="key">末班直达 Nozomi「のぞみ293号」东京站 21:24 发、23:45 到新大阪</mark>（品川 21:31 发；已按 JR 官方时刻核实，务必<strong>提前订好指定席</strong>并以官方 App 当日实际时刻为准）。请把<strong>回弥生町取行李</strong>与到站安检的富余算进去，别卡最后一分钟。</div>
       <div class="tags"><span>新宿药妆扫货</span><span>伊势丹美妆</span><span>友都八喜电器</span><span>思出横丁烧鸟</span><span>驿便当（车上晚餐）</span><span>道顿堀章鱼烧/拉面（夜宵）</span></div>
     </section>
 
@@ -633,38 +629,25 @@ flowchart LR
 
       <div class="day-img"><img src="assets/osaka.jpg" alt="大阪道顿堀、大阪城"></div>
 
-      <ul class="tl">
-        <li><span class="t">08:30</span><span class="a">大阪退房 · 行李寄存前台</span><div class="desc">大件已在京都，今天只留随身小包；行李箱若还有则寄存大阪酒店，晚上出发前来取。</div></li>
-        <li><span class="t">09:00</span><span class="a">大阪上午（选一条线）</span><div class="desc">大阪城 / 环球影城 / 黑门市场，见下方三条路线。</div></li>
-        <li><span class="t">11:00</span><span class="a">蟹道乐 道顿堀本店 · 午餐（3 人，已预约）</span><div class="desc">开门即到、避开排队。选午市蟹套餐，3 人约 ¥600–1000/人。<sup><a href="#cite-8">[8]</a></sup></div></li>
-        <li><span class="t">13:00</span><span class="a">道顿堀 + 心斋桥消食逛街</span><div class="desc">格力高招牌、运河、心斋桥购物街，饭后正好散步。</div></li>
-        <li><span class="t">15:00</span><span class="a">下午继续玩</span><div class="desc">通天阁新世界 / 大阪城，或续玩环球。</div></li>
-        <li><span class="t">18:00</span><span class="a">晚餐 + 夜游大阪</span><div class="desc">因为坐末班车去京都，晚上时间很足：好好吃顿晚餐，再逛道顿堀夜景、梅田空中庭园或 HEP FIVE 摩天轮。</div></li>
-        <li><span class="t">23:00</span><span class="a">回梅田取行李</span><div class="desc">末班新快速到 00:00 才发车，时间很宽裕；尽兴后回卢菲尔蒙特利酒店前台取回寄存的行李，步行到 JR 大阪站。</div></li>
-        <li><span class="t">00:00</span><span class="a">乘当日<strong>末班新快速</strong>大阪 → 京都</span><div class="desc">大阪站 JR 京都线<strong>末班新快速 00:00 发</strong>（仅停新大阪 00:05、高槻 00:17，<strong>00:30 到京都站</strong>）。到京都最晚的一班是 23:55 发的普通车（00:43 到）；00:00 后大阪虽有 00:10 车但只到高槻、不到京都。已按 JR 官方时刻核实，出行前再以官方 App 复核。<sup><a href="#cite-6">[6]</a></sup></div></li>
-        <li><span class="t">00:30</span><span class="a">京都入住</span><div class="desc">京都站转地铁/打车到四条里士满，取回宅急便寄来的大箱，安顿休息，明天开始京都深度游。</div></li>
-      </ul>
-
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day4 线路图（路线A大阪城经典）· <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">🏨 卢菲尔蒙特利(梅田)</div>
-          <div class="rm-leg transit"><span class="mode">🚈 JR环状线</span><span class="arrow"></span><span class="line">大阪→大阪城公园<br>约11分</span></div>
-          <div class="rm-node">🏯 大阪城天守阁</div>
-          <div class="rm-leg transit"><span class="mode">🚈 地铁</span><span class="arrow"></span><span class="line">→日本桥/难波<br>约12分</span></div>
-          <div class="rm-node end">🦀 蟹道乐(11:00午餐)</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">道顿堀→心斋桥<br>约8分</span></div>
-          <div class="rm-node">🛍️ 心斋桥</div>
-          <div class="rm-leg transit"><span class="mode">🚈 地铁</span><span class="arrow"></span><span class="line">堺筋线→惠美须町<br>约6分</span></div>
-          <div class="rm-node">🗼 通天阁/新世界</div>
-          <div class="rm-leg transit"><span class="mode">🚈 御堂筋线</span><span class="arrow"></span><span class="line">回梅田取行李<br>约15分</span></div>
-          <div class="rm-node hub">🚆 大阪站(梅田)</div>
-          <div class="rm-leg transit"><span class="mode">🚈 末班新快速</span><span class="arrow"></span><span class="line">00:00发·大阪→京都<br>约30分·00:30到</span></div>
-          <div class="rm-node end">⛩️ 四条里士满酒店</div>
+      <div class="fuse-wrap" data-fuse="4">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通</span></span><span>末班很晚·夜移京都不必赶</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day4 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day4.png" alt="Day4 真实地图线路：梅田→大阪城→道顿堀→通天阁→京都四条"></div>
-        <a class="day-map-btn" href="./route-map.html?day=4" target="_blank" rel="noopener">🧭 在交互地图打开 Day4（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <div class="note"><span class="h">🦀 蟹道乐午餐（3 人）· 预约与安排</span>蟹道乐是道顿堀最火的螃蟹料理老字号，饭点常排队 45 分钟以上<sup><a href="#cite-9">[9]</a></sup>，<mark class="key">务必提前在官网 douraku.co.jp 预约</mark>本店 3 人位，选 <strong>11:00 开门档</strong>最省时。营业 11:00–23:00、最晚入店 22:00、全年无休<sup><a href="#cite-8">[8]</a></sup>。安排在中午的三大好处：① 避开 18:00–20:00 晚高峰排队；② 吃完下午继续逛，不占用晚上去京都的时间；③ 午市套餐通常比晚市更划算。认门口那只会动的大螃蟹招牌即可；若不想久坐，门口也有外带窗口。</div>
@@ -672,7 +655,7 @@ flowchart LR
       <h3>大阪白天 · 点方案切换路线与信息（玩到深夜，坐末班车去京都）</h3>
       <div class="planbox" data-day="4"></div>
 
-      <div class="note warn"><span class="h">坐末班车去京都 · 提醒</span>你选择<strong>玩到深夜再坐末班车</strong>去京都，官网核实后时间比想象更宽裕：<mark class="key">大阪站 JR 京都线末班新快速 00:00 发、00:30 到京都站</mark>（仅停新大阪、高槻）。想更晚出发也行——23:55 发的普通车 00:43 到京都，是当晚到京都最晚的一班；但 00:00 之后大阪就没有能到京都的车了（00:10 那班只到高槻）。两点必做：① 出发前确认<strong>四条里士满酒店可深夜/凌晨 check-in</strong>（订房备注约 01:00 后到）；② 确认你的<strong>宅急便大箱已送达前台代收保管</strong>。若选环球影城线，注意闭园后先回梅田取寄存行李再赶末班车。</div>
+      <div class="note warn"><span class="h">坐末班车去京都 · 提醒</span><mark class="key">大阪站 JR 京都线末班新快速 00:00 发、00:30 到京都站</mark>（想更晚也可乘 23:55 普通车 00:43 到，是当晚最后一班；00:00 后无到京都的车）。两点必做：① 确认<strong>四条里士满酒店可深夜/凌晨 check-in</strong>（订房备注约 01:00 后到）；② 确认<strong>宅急便大箱已送达前台代收</strong>。若选环球影城线，闭园后先回梅田取寄存行李再赶末班车。</div>
       <div class="tags"><span>🦀蟹道乐(午餐·已约)</span><span>大阪城天守阁</span><span>黑门市场海鲜</span><span>道顿堀章鱼烧/大阪烧</span><span>心斋桥购物</span><span>通天阁串炸</span><span>环球影城(可选)</span></div>
     </section>
 
@@ -685,24 +668,25 @@ flowchart LR
       </div>
       <p class="day-note">京都第一整天（4 号晚才到京都），先走离市区最近、最经典的东山线：红鸟居+古寺+老街，全天在京都住宿不变。</p>
 
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day5 线路图（路线A东山经典）· <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">⛩️ 京都站</div>
-          <div class="rm-leg transit"><span class="mode">🚈 JR</span><span class="arrow"></span><span class="line">奈良线→稻荷站<br>约5分</span></div>
-          <div class="rm-node">⛩️ 伏见稻荷大社</div>
-          <div class="rm-leg transit"><span class="mode">🚈 电车</span><span class="arrow"></span><span class="line">京阪→清水五条<br>约8分</span></div>
-          <div class="rm-node">清水五条站</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">上坡至清水寺<br>约15分</span></div>
-          <div class="rm-node">🏯 清水寺</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">二三年坂古街<br>约15分</span></div>
-          <div class="rm-node">二三年坂</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">经八坂神社<br>约15分</span></div>
-          <div class="rm-node end">🏮 祇园花见小路</div>
+      <div class="fuse-wrap" data-fuse="5">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通</span></span><span>东山段以步行串联·古街漫步</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day5 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day5.png" alt="Day5 真实地图线路：四条→伏见稻荷→清水寺→二三年坂→祇园"></div>
-        <a class="day-map-btn" href="./route-map.html?day=5" target="_blank" rel="noopener">🧭 在交互地图打开 Day5（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <h3>京都全天 · 点方案切换路线与信息</h3>
@@ -718,22 +702,25 @@ flowchart LR
       </div>
       <p class="day-note">京都第三天，把前两天没走的补齐，购物、市场收尾。今晚仍住京都，方便明天返东京。</p>
 
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day6 线路图（路线A东山深度）· <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">⛩️ 京都站</div>
-          <div class="rm-leg transit"><span class="mode">🚌 巴士</span><span class="arrow"></span><span class="line">市巴士→银阁寺<br>约35分</span></div>
-          <div class="rm-node">🏯 银阁寺</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">哲学之道<br>约30分</span></div>
-          <div class="rm-node">🌸 南禅寺</div>
-          <div class="rm-leg transit"><span class="mode">🚈 地铁</span><span class="arrow"></span><span class="line">东西线→市役所前<br>约8分</span></div>
-          <div class="rm-node">🛍️ 锦市场</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">河原町/先斗町<br>约8分</span></div>
-          <div class="rm-node end">🏮 河原町</div>
+      <div class="fuse-wrap" data-fuse="6">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通(含巴士)</span></span><span>京都巴士多·可购巴士一日券</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day6 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day6.png" alt="Day6 真实地图线路：四条→银阁寺→哲学之道→南禅寺→锦市场"></div>
-        <a class="day-map-btn" href="./route-map.html?day=6" target="_blank" rel="noopener">🧭 在交互地图打开 Day6（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <h3>京都补线 · 点方案切换路线与信息</h3>
@@ -750,29 +737,25 @@ flowchart LR
       </div>
       <p class="day-note">硬约束：晚 <strong>19:00 从羽田起飞</strong>。国际航班建议起飞前 2.5–3 小时到机场值机，即<mark class="key">最迟 16:30 前抵达羽田</mark>。倒推安排如下，京都可留半个上午。</p>
 
-      <ul class="tl">
-        <li><span class="t">09:00</span><span class="a">京都轻松早晨</span><div class="desc">京都站附近逛街/买手信（抹茶、八桥），或补一个近站小景点。</div></li>
-        <li><span class="t">12:00</span><span class="a">京都站 午餐+取行李</span><div class="desc">吃碗拉面/便当，取寄存行李。</div></li>
-        <li><span class="t">12:45</span><span class="a">乘 Nozomi 京都 → 东京</span><div class="desc">京都→东京约 2h15m，直达。<sup><a href="#cite-7">[7]</a></sup></div></li>
-        <li><span class="t">15:05</span><span class="a">品川站换乘去羽田</span><div class="desc">品川转京急线到羽田机场约 15–20 分钟（比到东京站再折返更快）。</div></li>
-        <li><span class="t">15:40</span><span class="a">抵达羽田机场</span><div class="desc">留足约 3 小时值机、安检、退税、逛免税。</div></li>
-        <li><span class="t">19:00</span><span class="a">✈️ 羽田起飞</span><div class="desc">准点离境。</div></li>
-      </ul>
-
-      <div class="routemap">
-        <div class="rm-cap">🗺️ Day7 线路图 · <b>步行 + 公共交通</b></div>
-        <div class="rm-flow">
-          <div class="rm-node hub">⛩️ 京都住处</div>
-          <div class="rm-leg walk"><span class="mode">🚶 步行</span><span class="arrow"></span><span class="line">拖箱到京都站<br>约5–10分</span></div>
-          <div class="rm-node hub">🚄 京都站</div>
-          <div class="rm-leg transit"><span class="mode">🚄 新干线</span><span class="arrow"></span><span class="line">Nozomi→东京方向<br>约2h15m</span></div>
-          <div class="rm-node">品川站</div>
-          <div class="rm-leg transit"><span class="mode">🚈 京急</span><span class="arrow"></span><span class="line">京急线→羽田<br>约15–20分</span></div>
-          <div class="rm-node end">✈️ 羽田机场</div>
+      <div class="fuse-wrap" data-fuse="7">
+        <div class="fuse-body">
+          <div class="flow-col">
+            <div class="col-cap">🕑 时间轴 × 路线 · 点击任意一步联动右侧真实地图</div>
+            <ul class="steps"></ul>
+          </div>
+          <div class="map-col2">
+            <div class="map-inner">
+              <div class="map-bar">
+                <button class="fbm-btn active" data-base="gsi">日本地形图</button>
+                <button class="fbm-btn" data-base="osm">OSM</button>
+                <button class="fbm-btn" data-base="amap">高德</button>
+                <span class="map-hint">可缩放 · 点标记看导航</span>
+              </div>
+              <div class="fmap"></div>
+            </div>
+          </div>
         </div>
-        <div class="rm-legend"><span><span class="k-walk">┄ 步行</span></span><span><span class="k-transit">━ 公共交通</span></span><span>品川转京急比坐到东京站更快</span></div>
-        <div class="daymap"><div class="dm-cap">📍 真实地图 · <b>Day7 打点连线</b>（截自交互式导航图，红线=沿真实道路）</div><img src="assets/map_day7.png" alt="Day7 真实地图线路：京都→品川→羽田机场"></div>
-        <a class="day-map-btn" href="./route-map.html?day=7" target="_blank" rel="noopener">🧭 在交互地图打开 Day7（可缩放·真实路网·一键导航）</a>
+        <div class="fuse-foot">红线=公共交通 · 蓝线=步行；<b>红点</b>=站点，<b>蓝点</b>=住宿/枢纽。线路沿真实道路绘制，标记点可一键调起 Apple／高德／Google 地图导航。</div>
       </div>
 
       <div class="note warn">
@@ -967,7 +950,6 @@ flowchart LR
              + '<p class="pp-desc">'+p.desc+'</p>'
              + '<div class="pp-meta">'+meta+'</div>'
              + '<div class="pp-route"><div class="ppr-cap">🗺️ 线路流程 · 步行 ┄ / 公共交通 →</div><div class="pp-flow">'+flowHTML(p.flow)+'</div></div>'
-             + '<a class="plan-map-btn" href="./route-map.html?day='+day+'" target="_blank" rel="noopener">🧭 在交互地图查看这天线路</a>'
              + '</div>';
       }).join('');
       box.innerHTML = '<div class="plan-tabs">'+tabs+'</div><div class="plan-panels">'+panels+'</div>';
@@ -1000,6 +982,258 @@ flowchart LR
       s.onload = initMermaid;
       document.head.appendChild(s);
     }
+  </script>
+
+  <script>
+  (function(){
+
+  const FUSE = {
+    1: [
+      { t:'17:00', name:'✈️ 羽田机场 (HND) 落地', lat:35.5494, lng:139.7798, hub:true,
+        desc:'入境+取行李通常 45–70 分钟，实际出关约 17:45–18:15。' },
+      { t:'18:15', name:'🏠 弥生町住处', lat:35.6901, lng:139.6794, hub:true,
+        desc:'先回住处放行李、轻装出门，为晚间夜景做准备。',
+        leg:{ mode:'transit', label:'🚈 京急→品川转JR→丸之内线', line:'羽田→中野坂上→弥生町', dur:'约55分' } },
+      { t:'19:45', name:'🍽️ 涩谷晚餐', lat:35.6595, lng:139.7005,
+        desc:'在涩谷站周边或 SCRAMBLE SQUARE 楼内先吃顿好的，再上观景台。',
+        leg:{ mode:'transit', label:'🚈 丸之内线+JR山手线', line:'弥生町→(新宿换乘)→涩谷', dur:'约25分' } },
+      { t:'20:30', name:'🌃 涩谷天空 Shibuya Sky', lat:35.6580, lng:139.7016,
+        desc:'露天观景台俯瞰涩谷十字路口夜景，需提前预约时段票；带薄外套。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'涩谷站直连 SCRAMBLE SQUARE', dur:'约5分' } },
+      { t:'22:00', name:'🏠 返回弥生町住处', lat:35.6901, lng:139.6794, hub:true,
+        desc:'涩谷→新宿 JR 山手线，再换丸之内线回弥生町，调整时差。',
+        leg:{ mode:'transit', label:'🚈 JR山手线+丸之内线', line:'涩谷→(新宿换乘)→弥生町', dur:'约25分' } },
+    ],
+    2: [
+      { t:'08:00', name:'🏠 弥生町住处', lat:35.6901, lng:139.6794, hub:true,
+        desc:'行李留住处，当晚回来住。轻装出发去镰仓。' },
+      { t:'09:10', name:'⛩️ 镰仓站', lat:35.3191, lng:139.5506, hub:true,
+        desc:'从住处经新宿换 JR 湘南新宿线→横须贺线，多为直达或大船 1 次换乘。',
+        leg:{ mode:'transit', label:'🚈 丸之内线→新宿→JR湘南新宿线', line:'弥生町→镰仓', dur:'约1小时10分' } },
+      { t:'09:20', name:'鹤冈八幡宫', lat:35.3256, lng:139.5563,
+        desc:'镰仓象征、幕府信仰中心，出站沿小町通逛过去。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'沿小町通', dur:'约10分' } },
+      { t:'11:00', name:'长谷站', lat:35.3126, lng:139.5347,
+        desc:'乘复古「江之电」沿湘南海岸线行驶，像动画里的海边电车。',
+        leg:{ mode:'transit', label:'🚃 江之电', line:'镰仓→长谷', dur:'约5分' } },
+      { t:'11:30', name:'🗿 镰仓大佛(高德院)', lat:35.3169, lng:139.5358,
+        desc:'出长谷站约 500m，13.35m 青铜阿弥陀佛坐像，可入内参观。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'长谷站上坡', dur:'约7分' } },
+      { t:'13:00', name:'长谷寺 + 午餐', lat:35.3125, lng:139.5327,
+        desc:'观音+海景庭园；周边吃海鲜丼、镰仓可乐饼。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'', dur:'约5分' } },
+      { t:'14:30', name:'🏫 镰仓高校前', lat:35.3067, lng:139.5010,
+        desc:'《灌篮高手》道口打卡；慢逛海岸线、江之岛看落日，把镰仓玩透。',
+        leg:{ mode:'transit', label:'🚃 江之电', line:'长谷→镰仓高校前', dur:'约8分' } },
+      { t:'20:45', name:'🚄 东京站', lat:35.6812, lng:139.7671, hub:true,
+        desc:'镰仓 19:45 出发，乘 JR 横须贺线直达东京站，返程顺路不绕远。',
+        leg:{ mode:'transit', label:'🚈 JR横须贺线', line:'镰仓→东京站(顺路)', dur:'约1小时' } },
+      { t:'21:00', name:'🗼 东京塔外景·芝公园(拍照)', lat:35.6558, lng:139.7480,
+        desc:'不登塔，直接去塔下经典机位拍夜景：芝公园4号地/增上寺/赤羽桥路口。灯光通常亮到 24:00。',
+        leg:{ mode:'transit', label:'🚈 地铁三田线/大江户线', line:'东京站→御成门/赤羽桥·不登塔', dur:'约15分' } },
+      { t:'22:00', name:'🏠 返回弥生町', lat:35.6901, lng:139.6794, hub:true,
+        desc:'乘地铁/JR 约 35 分回弥生町（经新宿换丸之内线）。',
+        leg:{ mode:'transit', label:'🚈 地铁/JR', line:'东京塔→(新宿换乘)→弥生町', dur:'约35分' } },
+    ],
+    3: [
+      { t:'08:30', name:'🏠 弥生町住处', lat:35.6901, lng:139.6794, hub:true,
+        desc:'今天离开弥生町、以新宿购物为主，坐当日末班新干线去大阪过夜。' },
+      { t:'08:45', name:'📦 宅急便·渋谷本町2丁目中心', lat:35.6824, lng:139.6830, ykt:true,
+        desc:'住处最近的黑猫营业所（约0.9km/步行13分），把大件行李寄京都酒店（次日达），全天轻装。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'弥生町→最近黑猫营业所', dur:'约13分·0.9km' } },
+      { t:'09:30', name:'🌳 新宿御苑', lat:35.6852, lng:139.7100,
+        desc:'新宿站旁的大型庭园，日/英/法式庭园并存，早上人少空气好。',
+        leg:{ mode:'transit', label:'🚈 丸之内线', line:'中野坂上/西新宿→新宿御苑', dur:'约15分' } },
+      { t:'11:00', name:'🏙️ 东京都厅展望室', lat:35.6896, lng:139.6917,
+        desc:'202m 高空免费展望，俯瞰新宿高楼群，晴天可望富士山。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'→西新宿', dur:'约15分' } },
+      { t:'12:00', name:'🛍️ 新宿购物(伊势丹/百货/电器)', lat:35.6916, lng:139.7040,
+        desc:'东京最强购物区之一：伊势丹/LUMINE、Bic Camera/友都八喜、唐吉诃德、GU/UNIQLO 旗舰。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'新宿商圈', dur:'约10分' } },
+      { t:'16:00', name:'🦖 歌舞伎町', lat:35.6949, lng:139.7024,
+        desc:'新宿黄金街、哥斯拉头像楼，顺便囤手信；傍晚在新宿吃正餐。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'', dur:'约8分' } },
+      { t:'20:50', name:'🚄 东京站(新干线)', lat:35.6812, lng:139.7671, hub:true,
+        desc:'先回弥生町取回全部寄存行李（含朋友的），再经新宿换 JR 中央线快速到东京站。',
+        leg:{ mode:'transit', label:'🚈 JR中央线快速', line:'新宿→东京(先回弥生町取行李)', dur:'约14分' } },
+      { t:'21:24', name:'🚄 新大阪站', lat:34.7332, lng:135.5003, hub:true,
+        desc:'末班直达 Nozomi「のぞみ293号」东京站 21:24 发、23:45 到新大阪，务必提前订指定席。',
+        leg:{ mode:'transit', label:'🚄 末班のぞみ293(21:24发)', line:'东京→新大阪', dur:'约2h21m·23:45到' } },
+      { t:'23:50', name:'🏨 卢菲尔蒙特利(梅田)', lat:34.7025, lng:135.4959, hub:true,
+        desc:'新大阪转 JR/地铁 1 站到梅田，酒店紧邻 JR 大阪站，约 00:10 前入住休息。',
+        leg:{ mode:'transit', label:'🚈 JR/地铁', line:'新大阪→大阪(梅田)', dur:'约5分' } },
+    ],
+    4: [
+      { t:'08:30', name:'🏨 卢菲尔蒙特利(梅田)', lat:34.7025, lng:135.4959, hub:true,
+        desc:'大件已在京都，今天只留随身小包；行李箱寄存前台，晚上出发前来取。' },
+      { t:'09:00', name:'🏯 大阪城天守阁', lat:34.6873, lng:135.5262,
+        desc:'大阪地标，护城河与天守阁；也可换环球影城/黑门市场线。',
+        leg:{ mode:'transit', label:'🚈 JR环状线', line:'大阪→大阪城公园', dur:'约11分' } },
+      { t:'11:00', name:'🦀 蟹道乐 道顿堀本店(午餐·已约)', lat:34.6686, lng:135.5010,
+        desc:'开门即到、避开排队。选午市蟹套餐，认门口会动的大螃蟹招牌。',
+        leg:{ mode:'transit', label:'🚈 地铁', line:'→日本桥/难波', dur:'约12分' } },
+      { t:'13:00', name:'🛍️ 心斋桥 · 道顿堀', lat:34.6723, lng:135.5013,
+        desc:'格力高招牌、运河、心斋桥购物街，饭后正好散步消食。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'道顿堀→心斋桥', dur:'约8分' } },
+      { t:'15:00', name:'🗼 通天阁/新世界', lat:34.6524, lng:135.5063,
+        desc:'新世界串炸老街；晚上好好吃晚餐，再逛道顿堀夜景/梅田空中庭园。',
+        leg:{ mode:'transit', label:'🚈 堺筋线', line:'→惠美须町', dur:'约6分' } },
+      { t:'23:00', name:'🚆 大阪站(梅田)', lat:34.7025, lng:135.4959, hub:true,
+        desc:'末班新快速 00:00 才发车，时间宽裕；回酒店前台取行李，步行到 JR 大阪站。',
+        leg:{ mode:'transit', label:'🚈 御堂筋线', line:'回梅田取行李', dur:'约15分' } },
+      { t:'00:30', name:'⛩️ 四条里士满酒店(京都)', lat:35.0035, lng:135.7595, hub:true,
+        desc:'大阪站末班新快速 00:00 发、00:30 到京都；取回宅急便大箱，安顿休息。',
+        leg:{ mode:'transit', label:'🚈 末班新快速(00:00发)+地铁', line:'大阪→京都→四条', dur:'约40分·00:30到京都' } },
+    ],
+    5: [
+      { t:'09:00', name:'⛩️ 四条里士满酒店', lat:35.0035, lng:135.7595, hub:true,
+        desc:'京都第一整天，先走离市区最近、最经典的东山线。' },
+      { t:'09:20', name:'⛩️ 伏见稻荷大社', lat:34.9671, lng:135.7727,
+        desc:'千本鸟居红色隧道，京都必看地标，建议早到避人潮。',
+        leg:{ mode:'transit', label:'🚈 地铁+JR奈良线', line:'四条→京都→稻荷', dur:'约15分' } },
+      { t:'11:30', name:'🏯 清水寺', lat:34.9948, lng:135.7850,
+        desc:'悬空清水舞台俯瞰京都市景，世界遗产。',
+        leg:{ mode:'transit', label:'🚈 京阪+步行', line:'→清水五条站再上坡', dur:'约25分' } },
+      { t:'13:00', name:'二三年坂 · 午餐', lat:34.9962, lng:135.7817,
+        desc:'古街漫步，抹茶甜品、和风小店，最出片的石板坡道。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'古街漫步', dur:'约15分' } },
+      { t:'15:00', name:'🏮 祇园花见小路', lat:35.0037, lng:135.7752,
+        desc:'经八坂神社到祇园，傍晚有机会偶遇艺伎；晚餐在河原町。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'经八坂神社', dur:'约15分' } },
+    ],
+    6: [
+      { t:'09:00', name:'⛩️ 四条里士满酒店', lat:35.0035, lng:135.7595, hub:true,
+        desc:'京都第三天，走东山深度线，购物、市场收尾。今晚仍住京都。' },
+      { t:'09:40', name:'🏯 银阁寺', lat:35.0270, lng:135.7982,
+        desc:'东山文化代表，枯山水与苔庭，清幽雅致。',
+        leg:{ mode:'transit', label:'🚌 市巴士', line:'四条→银阁寺道', dur:'约30分' } },
+      { t:'11:00', name:'🌸 南禅寺', lat:35.0113, lng:135.7938,
+        desc:'沿哲学之道漫步而下，红砖水路阁与三门气势恢宏。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'沿哲学之道', dur:'约30分' } },
+      { t:'13:00', name:'🛍️ 锦市场', lat:35.0050, lng:135.7649,
+        desc:'「京都的厨房」，各式小吃、渍物、海鲜，边逛边吃当午餐。',
+        leg:{ mode:'transit', label:'🚈 地铁东西线', line:'蹴上→市役所前', dur:'约10分' } },
+      { t:'15:00', name:'🏮 河原町/先斗町', lat:35.0040, lng:135.7690,
+        desc:'四条河原町购物商圈 + 先斗町窄巷居酒屋，晚餐首选。今晚整理行李备返程。',
+        leg:{ mode:'walk', label:'🚶 步行', line:'', dur:'约8分' } },
+    ],
+    7: [
+      { t:'12:45', name:'⛩️ 京都站', lat:34.9858, lng:135.7588, hub:true,
+        desc:'硬约束 19:00 羽田起飞。上午京都站附近逛街买手信、取行李，乘 12:45 Nozomi。' },
+      { t:'15:00', name:'品川站', lat:35.6285, lng:139.7387, hub:true,
+        desc:'京都→东京约 2h15m 直达；建议在品川下车转京急，比坐到东京站再折返更快。',
+        leg:{ mode:'transit', label:'🚄 新干线 Nozomi', line:'京都→品川', dur:'约2h15m' } },
+      { t:'15:40', name:'✈️ 羽田机场', lat:35.5494, lng:139.7798, hub:true,
+        desc:'品川转京急线约 15–20 分到羽田，留足约 3 小时值机、安检、退税、逛免税。',
+        leg:{ mode:'transit', label:'🚈 京急线', line:'品川→羽田', dur:'约15–20分' } },
+    ],
+  };
+
+    const COLORS = { transit:'#b23a2e', walk:'#2f6270' };
+    const BASEMAPS = {
+      gsi:{ url:'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', opts:{ maxZoom:18, attribution:'&copy; 国土地理院 GSI Japan' } },
+      osm:{ url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts:{ maxZoom:19, attribution:'&copy; OpenStreetMap' } },
+      amap:{ url:'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', opts:{ subdomains:'1234', maxZoom:18, attribution:'&copy; 高德地图 AutoNavi' } }
+    };
+    const routeCache = {};
+    function appLinks(lat,lng,name,from,mode){
+      const q = encodeURIComponent(name.replace(/^[^\u4e00-\u9fa5A-Za-z]+/, '').trim()||name);
+      const gmode = mode==='walk'?'walking':'transit'; let apple,amap,google,label;
+      if(from){
+        const appleMode = mode==='walk'?'w':'r';
+        apple=`https://maps.apple.com/?saddr=${from.lat},${from.lng}&daddr=${lat},${lng}&dirflg=${appleMode}`;
+        amap=`https://uri.amap.com/navigation?from=${from.lng},${from.lat},起点&to=${lng},${lat},${q}&mode=${mode==='walk'?'walk':'bus'}&coordinate=wgs84&callnative=1`;
+        google=`https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lng}&destination=${lat},${lng}&travelmode=${gmode}`;
+        label='按真实路线导航：';
+      }else{
+        apple=`https://maps.apple.com/?ll=${lat},${lng}&q=${q}`;
+        amap=`https://uri.amap.com/marker?position=${lng},${lat}&name=${q}&coordinate=wgs84&callnative=1`;
+        google=`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`; label='用 App 打开：';
+      }
+      return `<div class="applinks"><span class="al-t">${label}</span>`
+        +`<a href="${apple}" target="_blank" rel="noopener">Apple 地图</a>`
+        +`<a href="${amap}" target="_blank" rel="noopener">高德地图</a>`
+        +`<a href="${google}" target="_blank" rel="noopener">Google 地图</a></div>`;
+    }
+    async function fetchRealRoute(from,to,mode){
+      const profile = mode==='walk'?'foot':'driving';
+      const key = `${profile}:${from.lat},${from.lng};${to.lat},${to.lng}`;
+      if(routeCache[key]!==undefined) return routeCache[key];
+      const url = `https://router.project-osrm.org/route/v1/${profile}/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+      try{ const r=await fetch(url); if(!r.ok) throw 0; const j=await r.json();
+        if(j.code==='Ok'&&j.routes&&j.routes[0]){ const c=j.routes[0].geometry.coordinates.map(p=>[p[1],p[0]]); routeCache[key]=c; return c; }
+      }catch(e){} routeCache[key]=null; return null;
+    }
+    function makeIcon(idx,hub,ykt){
+      if(ykt) return L.divIcon({ className:'', html:`<div class="ykt-badge" title="黑猫宅急便营业所">📦</div>`, iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-15] });
+      return L.divIcon({ className:'', html:`<div class="num-badge ${hub?'hub':''}">${idx}</div>`, iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-13] });
+    }
+
+    function buildDay(wrap){
+      const day = +wrap.getAttribute('data-fuse');
+      const STOPS = FUSE[day]; if(!STOPS) return;
+      const ul = wrap.querySelector('.steps');
+      const mapDiv = wrap.querySelector('.fmap');
+      // 渲染时间轴
+      ul.innerHTML = STOPS.map((st,idx)=>
+        `<li class="step" data-idx="${idx}">`
+        +`<span class="sbadge ${st.ykt?'ykt':(st.hub?'hub':'')}">${st.ykt?'📦':(idx+1)}</span>`
+        +`<span class="stime">${st.t||''}</span>`
+        +`<div class="sname">${st.name}</div>`
+        +`<div class="sdesc">${st.desc||''}</div>`
+        +(st.leg?`<span class="sleg">${st.leg.label}${st.leg.line?' · '+st.leg.line:''} · ${st.leg.dur}</span>`:'')
+        +`</li>`
+      ).join('');
+
+      let map=null, layerGroup=null, baseLayer=null; const markers=[];
+      function setBasemap(key){
+        if(baseLayer) map.removeLayer(baseLayer);
+        const b = BASEMAPS[key]||BASEMAPS.gsi;
+        baseLayer = L.tileLayer(b.url, b.opts).addTo(map); baseLayer.bringToBack();
+        wrap.querySelectorAll('.fbm-btn').forEach(btn=>btn.classList.toggle('active', btn.dataset.base===key));
+      }
+      function renderMap(){
+        map = L.map(mapDiv, { zoomControl:true, scrollWheelZoom:false });
+        setBasemap('gsi');
+        layerGroup = L.layerGroup().addTo(map);
+        wrap.querySelectorAll('.fbm-btn').forEach(btn=>btn.addEventListener('click',()=>setBasemap(btn.dataset.base)));
+        const pts=[];
+        for(let s=0;s<STOPS.length;s++){
+          const st=STOPS[s]; pts.push([st.lat,st.lng]);
+          if(s>0){
+            const prev=STOPS[s-1]; const mode=st.leg?st.leg.mode:'transit'; const color=COLORS[mode];
+            const ph=L.polyline([[prev.lat,prev.lng],[st.lat,st.lng]],{ color, weight:mode==='walk'?3:4, opacity:.35, dashArray:'2,7' }).addTo(layerGroup);
+            fetchRealRoute(prev,st,mode).then(c=>{ if(!c||c.length<2) return; layerGroup.removeLayer(ph);
+              L.polyline(c,{ color, weight:mode==='walk'?4:5, opacity:.9, dashArray:mode==='walk'?'4,8':null, lineJoin:'round' }).addTo(layerGroup); });
+          }
+        }
+        STOPS.forEach((st,idx)=>{
+          const m=L.marker([st.lat,st.lng],{ icon:makeIcon(idx+1,st.hub,st.ykt) }).addTo(layerGroup);
+          const prev=idx>0?STOPS[idx-1]:null; const mode=st.leg?st.leg.mode:'transit';
+          let html=`<b>${idx+1}. ${st.t||''} ${st.name}</b>`;
+          if(st.desc) html+=`<span class="pl">${st.desc}</span>`;
+          if(st.leg) html+=`<span class="pl">${st.leg.label}${st.leg.line?' · '+st.leg.line:''} · ${st.leg.dur}</span>`;
+          html+=appLinks(st.lat,st.lng,st.name,prev,mode);
+          m.bindPopup(html); markers.push(m);
+        });
+        if(pts.length) map.fitBounds(pts,{ padding:[45,45] });
+      }
+      function ensureMap(){ if(!map){ renderMap(); } }
+      function focusStop(idx){
+        ensureMap();
+        wrap.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('active', i===idx));
+        const st=STOPS[idx]; map.setView([st.lat,st.lng], 14, { animate:true });
+        if(markers[idx]) markers[idx].openPopup();
+      }
+      // 懒加载：地图进入视口再初始化
+      const io = new IntersectionObserver((es)=>{ es.forEach(e=>{ if(e.isIntersecting){ ensureMap(); io.disconnect(); } }); }, { rootMargin:'250px' });
+      io.observe(mapDiv);
+      ul.querySelectorAll('.step').forEach(el=>el.addEventListener('click',()=>focusStop(+el.dataset.idx)));
+    }
+
+    function initFuse(){ document.querySelectorAll('.fuse-wrap[data-fuse]').forEach(buildDay); }
+    if(document.readyState==='loading') window.addEventListener('DOMContentLoaded', initFuse); else initFuse();
+  })();
   </script>
 </body>
 </html>
